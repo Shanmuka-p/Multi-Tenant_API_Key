@@ -1,6 +1,6 @@
 # Multi-Tenant API Key Gateway
 
-A secure, multi-tenant API key management service built with Node.js, Express, PostgreSQL, and Redis. This service provides endpoints to generate, rotate, and revoke API keys, and includes a high-performance sliding-window rate limiter using Redis sorted sets. 
+A secure, multi-tenant API key management service built with Node.js, Express, PostgreSQL, and Redis. This service provides endpoints to generate, rotate, and revoke API keys, and includes a high-performance sliding-window rate limiter using Redis sorted sets. Uses the Redis.
 
 ## Features
 - **API Key Management**: Secure generation and storage (SHA-256 hashed) of API keys.
