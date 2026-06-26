@@ -10,7 +10,7 @@ const router = Router();
 router.post('/tenants/:tenantId/keys', async (req, res) => {
   try {
     const tenantId = parseInt(req.params.tenantId, 10);
-    const rateLimitPerMinute = req.body.rateLimitPerMinute || 100;
+    const rateLimitPerMinute = req.body.rateLimitPerMinute || 10;
     
     const result = await generateKey(tenantId, rateLimitPerMinute);
     res.status(201).json(result);

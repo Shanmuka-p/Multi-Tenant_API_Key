@@ -55,6 +55,9 @@ curl -H "Authorization: Bearer <your_api_key>" http://localhost:3000/api/protect
 ## Testing Core Requirements
 
 The core requirements specified in the evaluation can be tested as follows:
-- **Rate Limiting**: Configured at 100 requests per minute by default. Requests beyond this within a sliding 60-second window will be rejected with a 429 status and a `Retry-After` header.
-- **Database Schema**: The `init.sql` script correctly sets up the `tenants`, `api_keys`, and `audit_logs` tables with constraints on startup.
+- **Rate Limiting**: Configured at 10 requests per minute by default. Requests beyond this within a sliding 60-second window will be rejected with a 429 status and a `Retry-After` header. You can quickly test this in PowerShell using:
+  ```powershell
+  1..15 | ForEach-Object { curl -H "Authorization: Bearer <your_api_key>" http://localhost:3000/api/protected }
+  ```
+- **Database Schema & Key Revocation**: The `init.sql` script correctly sets up the `tenants`, `api_keys`, and `audit_logs` tables with constraints on startup. Revoking a key performs a "soft delete" (`is_active = FALSE`) to disable the key while preserving audit history integrity.
 - **Authentication**: Validation explicitly fails without a valid `Authorization: Bearer <token>` header, or if the key has been revoked.

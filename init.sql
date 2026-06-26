@@ -10,7 +10,7 @@ CREATE TABLE api_keys (
     key_hash VARCHAR(255) NOT NULL UNIQUE,
     key_prefix VARCHAR(10) NOT NULL,
     last_four VARCHAR(4) NOT NULL,
-    rate_limit_per_minute INTEGER DEFAULT 100,
+    rate_limit_per_minute INTEGER DEFAULT 10,
     is_active BOOLEAN DEFAULT TRUE,
     expires_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

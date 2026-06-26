@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { query } from '../config/db';
 
-export const generateKey = async (tenantId: number, rateLimitPerMinute: number = 100) => {
+export const generateKey = async (tenantId: number, rateLimitPerMinute: number = 10) => {
   // Generate random bytes
   const buffer = crypto.randomBytes(32);
   // Base64 URL-safe encode
@@ -46,7 +46,7 @@ export const listKeys = async (tenantId: number) => {
 };
 
 export const revokeKey = async (keyId: number) => {
-  await query(`DELETE FROM api_keys WHERE id = $1`, [keyId]);
+  await query(`UPDATE api_keys SET is_active = FALSE WHERE id = $1`, [keyId]);
 };
 
 export const rotateKey = async (keyId: number) => {
