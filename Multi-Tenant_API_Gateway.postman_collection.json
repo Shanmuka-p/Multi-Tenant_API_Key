@@ -1,0 +1,143 @@
+{
+	"info": {
+		"name": "Multi-Tenant API Gateway",
+		"description": "Endpoints for managing tenants, API keys, and testing the rate-limited protected endpoint.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Key",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"rateLimitPerMinute\": 10\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/tenants/1/keys",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"tenants",
+						"1",
+						"keys"
+					]
+				}
+			}
+		},
+		{
+			"name": "List Keys",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/tenants/1/keys",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"tenants",
+						"1",
+						"keys"
+					]
+				}
+			}
+		},
+		{
+			"name": "Protected Endpoint",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{apiKey}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/protected",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"protected"
+					]
+				}
+			}
+		},
+		{
+			"name": "Rotate Key",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/keys/1/rotate",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"keys",
+						"1",
+						"rotate"
+					]
+				}
+			}
+		},
+		{
+			"name": "Revoke Key",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/keys/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"keys",
+						"1"
+					]
+				}
+			}
+		},
+		{
+			"name": "Audit Logs",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/logs",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"logs"
+					]
+				}
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000"
+		},
+		{
+			"key": "apiKey",
+			"value": "your_api_key_here"
+		}
+	]
+}
