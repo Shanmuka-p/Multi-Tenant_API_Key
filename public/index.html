@@ -1,278 +1,857 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Key Management Dashboard</title>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --bg-color: #0f172a;
-            --surface-color: #1e293b;
-            --text-color: #f8fafc;
-            --text-muted: #94a3b8;
-            --primary-color: #3b82f6;
-            --primary-hover: #2563eb;
-            --danger-color: #ef4444;
-            --danger-hover: #dc2828;
-            --border-color: #334155;
-            --success-color: #10b981;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Key Gateway — Management Console</title>
+  <meta name="description" content="Secure multi-tenant API key management console. Create, rotate, revoke, and monitor API keys with real-time usage analytics." />
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-        }
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            padding: 2rem;
-        }
+  <style>
+    /* ── Design Tokens ───────────────────────────────────────────────── */
+    :root {
+      --bg:           #080e1a;
+      --bg-alt:       #0d1526;
+      --surface:      #111d35;
+      --surface-2:    #162040;
+      --border:       #1e2d4a;
+      --border-light: #243558;
 
-        h1, h2 {
-            font-weight: 600;
-        }
+      --text:         #e8edf5;
+      --text-2:       #8fa3c0;
+      --text-3:       #5a7090;
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
+      --primary:      #3d7fff;
+      --primary-dim:  rgba(61,127,255,0.15);
+      --primary-glow: rgba(61,127,255,0.4);
 
-        .card {
-            background-color: var(--surface-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid var(--border-color);
-        }
+      --green:        #22c98c;
+      --green-dim:    rgba(34,201,140,0.12);
+      --red:          #f25c6e;
+      --red-dim:      rgba(242,92,110,0.12);
+      --yellow:       #f5a623;
+      --yellow-dim:   rgba(245,166,35,0.12);
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
+      --radius:       10px;
+      --radius-lg:    16px;
+      --radius-xl:    20px;
+      --transition:   0.18s ease;
+    }
 
-        th, td {
-            text-align: left;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
+    /* ── Reset & Base ────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        th {
-            color: var(--text-muted);
-            font-weight: 500;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
+    html { scroll-behavior: smooth; }
 
-        .badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
 
-        .badge-active {
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success-color);
-        }
+    /* ── Layout ──────────────────────────────────────────────────────── */
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
 
-        .badge-inactive {
-            background-color: rgba(239, 68, 68, 0.1);
-            color: var(--danger-color);
-        }
+    /* ── Sidebar ─────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--bg-alt);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 1rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
 
-        button {
-            cursor: pointer;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 0.875rem;
-            border: none;
-            transition: all 0.2s ease;
-        }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 2rem;
+      padding: 0 0.5rem;
+    }
 
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), #6a4fff);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
 
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-        }
+    .logo-text {
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .logo-sub { font-size: 0.7rem; color: var(--text-3); }
 
-        .btn-danger {
-            background-color: transparent;
-            color: var(--danger-color);
-            border: 1px solid var(--danger-color);
-        }
+    .nav-section {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+      padding: 0 0.5rem;
+      margin: 0.75rem 0 0.4rem;
+    }
 
-        .btn-danger:hover {
-            background-color: var(--danger-color);
-            color: white;
-        }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 0.875rem;
+      color: var(--text-2);
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
 
-        .btn-secondary {
-            background-color: transparent;
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
+    .nav-item:hover { background: var(--surface); color: var(--text); }
+    .nav-item.active { background: var(--primary-dim); color: var(--primary); }
 
-        .btn-secondary:hover {
-            background-color: var(--border-color);
-        }
+    .nav-item .icon { font-size: 1rem; width: 1.2rem; text-align: center; }
 
-        .actions {
-            display: flex;
-            gap: 0.5rem;
-        }
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
 
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
+    .tenant-selector {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      width: 100%;
+      cursor: pointer;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+    .tenant-selector:focus { outline: none; border-color: var(--primary); }
 
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-            z-index: 50;
-        }
+    /* ── Main Content ────────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem 2.5rem;
+      max-width: 1200px;
+    }
 
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
+    /* ── Page Header ─────────────────────────────────────────────────── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
 
-        .modal {
-            background-color: var(--surface-color);
-            padding: 2rem;
-            border-radius: 12px;
-            max-width: 400px;
-            width: 100%;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            transform: translateY(20px);
-            transition: transform 0.2s ease;
-        }
+    .page-title { font-size: 1.5rem; font-weight: 700; }
+    .page-subtitle { font-size: 0.85rem; color: var(--text-2); margin-top: 0.15rem; }
 
-        .modal-overlay.active .modal {
-            transform: translateY(0);
-        }
+    .header-actions { display: flex; gap: 0.75rem; align-items: center; }
 
-        .modal-title {
-            margin-top: 0;
-            margin-bottom: 1rem;
-        }
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--green);
+      padding: 0.35rem 0.75rem;
+      background: var(--green-dim);
+      border-radius: 99px;
+      border: 1px solid rgba(34,201,140,0.2);
+    }
 
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-        
-        .code-block {
-            background-color: #0b1120;
-            padding: 1rem;
-            border-radius: 6px;
-            font-family: monospace;
-            word-break: break-all;
-            color: var(--success-color);
-            margin: 1rem 0;
-        }
-    </style>
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ── Stats Cards ─────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .stat-card.blue::before  { background: linear-gradient(90deg, var(--primary), #6a4fff); }
+    .stat-card.green::before { background: linear-gradient(90deg, var(--green), #0be3a4); }
+    .stat-card.red::before   { background: linear-gradient(90deg, var(--red), #ff8c69); }
+    .stat-card.yellow::before{ background: linear-gradient(90deg, var(--yellow), #ffd700); }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-3);
+      margin-bottom: 0.6rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-card.blue  .stat-value { color: var(--primary); }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.red   .stat-value { color: var(--red); }
+    .stat-card.yellow .stat-value{ color: var(--yellow); }
+
+    .stat-sub {
+      font-size: 0.75rem;
+      color: var(--text-3);
+      margin-top: 0.4rem;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .card-body { padding: 1.5rem; }
+
+    /* ── Chart ───────────────────────────────────────────────────────── */
+    .chart-wrap {
+      position: relative;
+      height: 240px;
+    }
+
+    /* ── Table ───────────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-3);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    tbody tr {
+      transition: var(--transition);
+    }
+
+    tbody tr:hover { background: var(--surface-2); }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+    }
+
+    /* ── Badges ──────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.65rem;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .badge-green  { background: var(--green-dim);  color: var(--green); border: 1px solid rgba(34,201,140,0.2); }
+    .badge-red    { background: var(--red-dim);    color: var(--red);   border: 1px solid rgba(242,92,110,0.2); }
+    .badge-yellow { background: var(--yellow-dim); color: var(--yellow);border: 1px solid rgba(245,166,35,0.2); }
+    .badge-blue   { background: var(--primary-dim);color: var(--primary);border: 1px solid rgba(61,127,255,0.2); }
+
+    /* ── Buttons ─────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1.1rem;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 0 0 var(--primary-glow);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #2f6ff0;
+      box-shadow: 0 4px 20px var(--primary-glow);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--border-light);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid var(--red-dim);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: var(--red-dim);
+      border-color: rgba(242,92,110,0.4);
+    }
+
+    .btn-sm {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .btn-icon {
+      padding: 0.35rem 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    /* ── Pagination ──────────────────────────────────────────────────── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pagination-info { font-size: 0.8rem; color: var(--text-3); }
+    .pagination-controls { display: flex; gap: 0.5rem; }
+
+    /* ── Empty State ─────────────────────────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      color: var(--text-3);
+      text-align: center;
+      gap: 0.75rem;
+    }
+
+    .empty-icon { font-size: 2.5rem; opacity: 0.5; }
+    .empty-text { font-size: 0.9rem; }
+
+    /* ── Modal ───────────────────────────────────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8,14,26,0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .overlay.open { opacity: 1; pointer-events: auto; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      padding: 2rem;
+      max-width: 460px;
+      width: 90%;
+      transform: translateY(16px) scale(0.98);
+      transition: transform 0.2s ease;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+
+    .overlay.open .modal { transform: translateY(0) scale(1); }
+
+    .modal-header { margin-bottom: 1.25rem; }
+    .modal-title { font-size: 1.1rem; font-weight: 700; }
+    .modal-sub { font-size: 0.85rem; color: var(--text-2); margin-top: 0.3rem; }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1.75rem;
+    }
+
+    /* ── Key Display ─────────────────────────────────────────────────── */
+    .key-display {
+      background: var(--bg);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      margin: 1rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .key-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--green);
+      word-break: break-all;
+      flex: 1;
+    }
+
+    .copy-btn {
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: var(--transition);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { background: var(--border); color: var(--text); }
+    .copy-btn.copied { background: var(--green-dim); color: var(--green); border-color: transparent; }
+
+    .key-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      background: var(--yellow-dim);
+      border: 1px solid rgba(245,166,35,0.2);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--yellow);
+    }
+
+    /* ── Loading ─────────────────────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      height: 1rem;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── Toast Notification ──────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      min-width: 260px;
+      animation: slideIn 0.25s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--red); }
+    .toast.info    { border-left: 3px solid var(--primary); }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+    /* ── Rate Limit Bar ──────────────────────────────────────────────── */
+    .rl-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 120px;
+    }
+    .rl-bar {
+      flex: 1;
+      height: 5px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .rl-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: var(--primary);
+    }
+    .rl-label { font-size: 0.75rem; color: var(--text-3); white-space: nowrap; }
+
+    /* ── Actions Cell ────────────────────────────────────────────────── */
+    .action-cell { display: flex; gap: 0.4rem; }
+
+    /* ── Status Code Colors ──────────────────────────────────────────── */
+    .sc-200 { color: var(--green); }
+    .sc-401 { color: var(--yellow); }
+    .sc-429 { color: var(--red); }
+    .sc-500 { color: #c084fc; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>API Key Management Dashboard</h1>
-            <p style="color: var(--text-muted)">Tenant: Acme Corp (ID: 1)</p>
-        </div>
 
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>API Keys</h2>
-                <button class="btn-primary" onclick="createKey()">+ Create New Key</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Key</th>
-                        <th>Created</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="keysTableBody">
-                    <!-- Keys will be loaded here -->
-                </tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <h2>Usage Visualization (Last Hour)</h2>
-            <div class="chart-container">
-                <canvas id="usageChart"></canvas>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Audit Logs</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>Key</th>
-                        <th>Endpoint</th>
-                        <th>Status Code</th>
-                    </tr>
-                </thead>
-                <tbody id="logsTableBody">
-                    <!-- Logs will be loaded here -->
-                </tbody>
-            </table>
-        </div>
+<div class="layout">
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🔑</div>
+      <div>
+        <div class="logo-text">API Gateway</div>
+        <div class="logo-sub">Management Console</div>
+      </div>
     </div>
 
-    <!-- Modals -->
-    <div class="modal-overlay" id="keyModal">
-        <div class="modal">
-            <h3 class="modal-title" id="keyModalTitle">New API Key</h3>
-            <p>Please copy this key now. You will not be able to see it again!</p>
-            <div class="code-block" id="newKeyValue">sk_live_...</div>
-            <div class="modal-actions">
-                <button class="btn-primary" onclick="closeModal('keyModal')">Close</button>
-            </div>
+    <div class="nav-section">Dashboard</div>
+    <button class="nav-item active" onclick="showSection('overview')" id="nav-overview">
+      <span class="icon">📊</span> Overview
+    </button>
+    <button class="nav-item" onclick="showSection('keys')" id="nav-keys">
+      <span class="icon">🗝️</span> API Keys
+    </button>
+    <button class="nav-item" onclick="showSection('logs')" id="nav-logs">
+      <span class="icon">📋</span> Audit Logs
+    </button>
+
+    <div class="sidebar-footer">
+      <div class="nav-section" style="margin-bottom: 0.6rem;">Active Tenant</div>
+      <select class="tenant-selector" id="tenantSelector" onchange="switchTenant(this.value)">
+        <option value="1">Acme Corp (ID: 1)</option>
+        <option value="2">Globex Systems (ID: 2)</option>
+      </select>
+    </div>
+  </aside>
+
+  <!-- ── Main ───────────────────────────────────────────────────────── -->
+  <main class="main">
+    <!-- Overview Section -->
+    <section id="section-overview">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Overview</h1>
+          <p class="page-subtitle" id="tenantLabel">Acme Corp · Tenant ID: 1</p>
         </div>
+        <div class="header-actions">
+          <div class="live-badge"><div class="live-dot"></div>Live</div>
+          <button class="btn btn-primary" onclick="openCreateModal()" id="btn-create-key">+ Create API Key</button>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-label">Total Keys</div>
+          <div class="stat-value" id="stat-total-keys">–</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Active Keys</div>
+          <div class="stat-value" id="stat-active-keys">–</div>
+          <div class="stat-sub">Currently valid</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Requests / Hour</div>
+          <div class="stat-value" id="stat-req-hour">–</div>
+          <div class="stat-sub">Last 60 minutes</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Rate Limited</div>
+          <div class="stat-value" id="stat-rate-limited">–</div>
+          <div class="stat-sub">429 responses total</div>
+        </div>
+      </div>
+
+      <!-- Usage Chart -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Request Activity — Last Hour</span>
+          <span class="badge badge-blue" id="chart-period">60 min</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap">
+            <canvas id="activityChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Logs snapshot -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Requests</span>
+          <button class="btn btn-ghost btn-sm" onclick="showSection('logs')">View All →</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>API Key</th>
+                <th>Endpoint</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="recentLogsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- API Keys Section -->
+    <section id="section-keys" style="display:none">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">API Keys</h1>
+          <p class="page-subtitle">Manage credentials for your tenant</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()" id="btn-create-key-2">+ Create API Key</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Created</th>
+                <th>Rate Limit</th>
+                <th>Expires</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="keysTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Audit Logs Section -->
+    <section id="section-logs" style="display:none">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Audit Logs</h1>
+          <p class="page-subtitle">Full request history for your tenant</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="fetchLogs(true)">↻ Refresh</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>API Key</th>
+                <th>Endpoint</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span class="pagination-info" id="logsInfo">–</span>
+          <div class="pagination-controls">
+            <button class="btn btn-ghost btn-sm" id="btn-prev" onclick="prevPage()">← Prev</button>
+            <button class="btn btn-ghost btn-sm" id="btn-next" onclick="nextPage()">Next →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ── Toast Container ───────────────────────────────────────────────── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ── Create Key Modal ──────────────────────────────────────────────── -->
+<div class="overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Create New API Key</div>
+      <div class="modal-sub">Configure and generate a new credential</div>
     </div>
 
-    <script src="/app.js"></script>
+    <label style="font-size:0.85rem;color:var(--text-2);display:block;margin-bottom:0.4rem;">Rate Limit (requests / minute)</label>
+    <input
+      type="number"
+      id="createRateLimit"
+      value="100"
+      min="1"
+      max="10000"
+      style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:0.6rem 0.85rem;font-family:inherit;font-size:0.9rem;transition:var(--transition);"
+      onfocus="this.style.borderColor='var(--primary)'"
+      onblur="this.style.borderColor='var(--border)'"
+    />
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('createModal')">Cancel</button>
+      <button class="btn btn-primary" id="btn-do-create" onclick="doCreateKey()">Generate Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Key Display Modal ─────────────────────────────────────────── -->
+<div class="overlay" id="keyDisplayModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="keyDisplayTitle">API Key Generated</div>
+      <div class="modal-sub">Copy this key now — it will never be shown again.</div>
+    </div>
+
+    <div class="key-warning">
+      ⚠️ Store this key securely. It cannot be recovered after this dialog is closed.
+    </div>
+
+    <div class="key-display">
+      <span class="key-value" id="keyDisplayValue">sk_live_...</span>
+      <button class="copy-btn" id="copyBtn" onclick="copyKey()">Copy</button>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('keyDisplayModal')">I've saved the key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rotate Confirm Modal ──────────────────────────────────────────── -->
+<div class="overlay" id="rotateModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Rotate API Key</div>
+      <div class="modal-sub">A new key will be generated. Your old key remains valid for <strong>1 minute</strong> to allow a seamless transition.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('rotateModal')">Cancel</button>
+      <button class="btn btn-primary" id="btn-do-rotate" onclick="doRotateKey()">Rotate Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Revoke Confirm Modal ──────────────────────────────────────────── -->
+<div class="overlay" id="revokeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Revoke API Key</div>
+      <div class="modal-sub">This action is <strong>immediate and irreversible</strong>. Any services using this key will receive 401 Unauthorized.</div>
+    </div>
+    <div style="background:var(--red-dim);border:1px solid rgba(242,92,110,0.2);border-radius:var(--radius);padding:0.75rem;font-size:0.82rem;color:var(--red);margin-top:0.5rem;">
+      🛑 All active sessions using this key will be immediately terminated.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('revokeModal')">Cancel</button>
+      <button class="btn btn-danger" id="btn-do-revoke" onclick="doRevokeKey()">Revoke Key</button>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
 </body>
 </html>

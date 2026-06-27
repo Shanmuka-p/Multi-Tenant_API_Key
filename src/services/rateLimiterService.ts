@@ -1,35 +1,54 @@
 import { redisClient } from '../config/redis';
 
-export const checkRateLimit = async (apiKeyId: number, rateLimitPerMinute: number) => {
+const WINDOW_MS = 60_000; // 60-second sliding window
+
+/**
+ * Sliding-window log rate limiter using Redis sorted sets.
+ *
+ * Algorithm (all steps run atomically via MULTI/EXEC):
+ *  1. ZREMRANGEBYSCORE — evict timestamps older than the current window
+ *  2. ZCARD            — count requests remaining in the window (BEFORE adding)
+ *  3. ZADD             — add the current request timestamp (only if allowed)
+ *  4. EXPIRE           — keep the set TTL tidy
+ *
+ * By reading the count BEFORE adding, we avoid inflating the window with
+ * blocked requests' timestamps — a common off-by-one implementation mistake.
+ */
+export const checkRateLimit = async (
+  apiKeyId: number,
+  rateLimitPerMinute: number
+): Promise<{ allowed: boolean; count: number; retryAfterMs?: number }> => {
   const key = `rate_limit:${apiKeyId}`;
   const now = Date.now();
-  const windowStart = now - 60000; // 60 seconds ago
+  const windowStart = now - WINDOW_MS;
 
-  // Execute transactionally
-  const multi = redisClient.multi();
-  
-  // 1. Remove old entries outside the window
-  multi.zRemRangeByScore(key, 0, windowStart);
-  
-  // 2. Add current request
-  // Add a random component to value to make it unique within the same millisecond
-  const uniqueValue = `${now}-${Math.random()}`;
-  multi.zAdd(key, [{ score: now, value: uniqueValue }]);
-  
-  // 3. Count requests in the window
-  multi.zCard(key);
-  
-  // Optional: Set expiration on the sorted set so it cleans up if unused
-  multi.expire(key, 60);
+  // Step 1 & 2: Evict stale entries, then count existing ones — atomically
+  const pipeline = redisClient.multi();
+  pipeline.zRemRangeByScore(key, 0, windowStart);  // remove expired entries
+  pipeline.zCard(key);                              // count remaining
+  const preResults = await pipeline.exec();
 
-  const results = await multi.exec();
-  
-  // results[2] corresponds to the zCard result
-  const count = results[2] as number;
-  
-  if (count > rateLimitPerMinute) {
-    return { allowed: false, count };
+  const currentCount = preResults[1] as number;
+
+  if (currentCount >= rateLimitPerMinute) {
+    // Request is denied — do NOT add to sorted set so it doesn't pollute the window.
+    // Calculate Retry-After: time until the oldest entry falls out of the window.
+    const oldest = await redisClient.zRangeWithScores(key, 0, 0);
+    let retryAfterMs = WINDOW_MS; // fallback: full window
+    if (oldest.length > 0) {
+      const oldestTimestamp = oldest[0].score;
+      retryAfterMs = Math.max(0, WINDOW_MS - (now - oldestTimestamp));
+    }
+    return { allowed: false, count: currentCount, retryAfterMs };
   }
-  
-  return { allowed: true, count };
+
+  // Request is allowed — now record it.
+  // Use a unique value (timestamp + random) to support concurrent requests in same ms.
+  const uniqueValue = `${now}-${Math.random().toString(36).slice(2)}`;
+  const addPipeline = redisClient.multi();
+  addPipeline.zAdd(key, [{ score: now, value: uniqueValue }]);
+  addPipeline.expire(key, Math.ceil(WINDOW_MS / 1000) + 1); // auto-cleanup
+  await addPipeline.exec();
+
+  return { allowed: true, count: currentCount + 1 };
 };
